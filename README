@@ -1,0 +1,3 @@
+# Kafka C++ producer and consumer, integrated in Qt6 application
+
+Interaction with the kafka events is through Qt's signals/slot mechanism
