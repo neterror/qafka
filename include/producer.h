@@ -4,9 +4,10 @@
 #include "kafka_client.h"
 #include <librdkafka/rdkafkacpp.h>
 #include <optional>
+#include "qafka_export.h"
 
 
-class Producer : public KafkaClient, public RdKafka::DeliveryReportCb {
+class QAFKA_EXPORT Producer : public KafkaClient, public RdKafka::DeliveryReportCb {
     Q_OBJECT
     std::unique_ptr<RdKafka::Producer> mProducer;
 

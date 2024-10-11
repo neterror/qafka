@@ -2,9 +2,9 @@
 #include <QObject>
 #include "kafka_client.h"
 #include <librdkafka/rdkafkacpp.h>
+#include "qafka_export.h"
 
-
-class Consumer : public KafkaClient,
+class QAFKA_EXPORT Consumer : public KafkaClient,
                  public RdKafka::RebalanceCb,
                  public RdKafka::EventCb {
     Q_OBJECT
