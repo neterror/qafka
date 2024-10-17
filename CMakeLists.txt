@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
-project(qafka)
+project(qafka VERSION 1.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_MAKEFILE OFF)
-
+set(CMAKE_BUILD_TYPE Debug)
 
 find_package(Qt6 CONFIG REQUIRED Core)
 qt_standard_project_setup()
@@ -39,9 +39,6 @@ add_executable(test
 )
 
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror -fsanitize=undefined -fsanitize=address")
-target_link_options(qafka  BEFORE PUBLIC -fsanitize=undefined PUBLIC -fsanitize=address)
-
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(KAFKA REQUIRED rdkafka++)
 
@@ -52,4 +49,4 @@ target_link_libraries(test PUBLIC qafka)
 
 install(TARGETS qafka  LIBRARY DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include/qafka)
-install(FILES ${CMAKE_BINARY_DIR}/bin/qafka_export.h DESTINATION include/qafka)
+install(FILES ${CMAKE_BINARY_DIR}/qafka_export.h DESTINATION include/qafka)

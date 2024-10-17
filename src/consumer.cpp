@@ -39,6 +39,9 @@ std::optional<QString> Consumer::initialize() {
     }
 
     mConsumer = RdKafka::KafkaConsumer::create(config.get(), error);;
+    if (!mConsumer) {
+        return error.c_str();
+    }
     qDebug() << "created consumer" << mConsumer->name().c_str();
 
     std::vector<std::string> topics;
@@ -58,7 +61,7 @@ std::optional<QString> Consumer::initialize() {
     
 void Consumer::work() {
     if (auto error = initialize(); error) {
-        qWarning() << "producer initialization failed" << error;
+        qWarning() << "consumer initialization failed" << error;
         emit finished();
         return;
     }
