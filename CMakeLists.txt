@@ -34,18 +34,12 @@ target_sources(qafka
 )
 
 
-add_executable(test
-  test/main.cpp
-)
-
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(KAFKA REQUIRED rdkafka++)
 
 
 target_link_libraries(qafka PUBLIC Qt6::Core ${KAFKA_LIBRARIES})
-target_link_libraries(test PUBLIC qafka)
-
 
 install(TARGETS qafka  LIBRARY DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include/qafka)
