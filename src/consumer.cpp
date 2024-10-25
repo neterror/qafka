@@ -58,7 +58,18 @@ std::optional<QString> Consumer::initialize() {
 
     return std::nullopt;
 }
-    
+
+
+void Consumer::resetTopicPosition(const QString& topic)
+{
+    std::vector<RdKafka::TopicPartition *> partitions;
+    mConsumer->assignment(partitions);
+
+    for (const auto& partition: partitions) {
+        partition->set_offset(RdKafka::Topic::OFFSET_BEGINNING);
+    }
+}
+
 void Consumer::work() {
     if (auto error = initialize(); error) {
         qWarning() << "consumer initialization failed" << error;
@@ -71,11 +82,13 @@ void Consumer::work() {
     while (mRunning) {
         //todo. check what is RdKafka::ERR__PARTITION_EOF and how to deal with it
         auto data = mConsumer->consume(1000);
+        auto timestamp = data->timestamp();
+
         if (data->err() == RdKafka::ERR_NO_ERROR) {
             QByteArray payload((char*)data->payload(), data->len());
             QByteArray topic = data->topic_name().c_str();
 
-            emit message(topic, payload);
+            emit message(data->timestamp(), data->offset(), topic, payload);
         }
         delete data;
         QCoreApplication::processEvents( QEventLoop::AllEvents, 10);

@@ -26,7 +26,8 @@ public:
 
 public slots:
     void work() override;
+    void resetTopicPosition(const QString& topic);
 
 signals:
-    void message(QByteArray topic, QByteArray data);
+    void message(RdKafka::MessageTimestamp timestamp, quint64 offset, QByteArray topic, QByteArray data);
 };
