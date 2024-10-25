@@ -60,16 +60,6 @@ std::optional<QString> Consumer::initialize() {
 }
 
 
-void Consumer::resetTopicPosition(const QString& topic)
-{
-    std::vector<RdKafka::TopicPartition *> partitions;
-    mConsumer->assignment(partitions);
-
-    for (const auto& partition: partitions) {
-        partition->set_offset(RdKafka::Topic::OFFSET_BEGINNING);
-    }
-}
-
 void Consumer::work() {
     if (auto error = initialize(); error) {
         qWarning() << "consumer initialization failed" << error;
