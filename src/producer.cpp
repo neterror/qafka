@@ -72,15 +72,13 @@ void Producer::internalSend(const QString& topic, const QByteArray& key, const Q
 {
     //PARTITION_UA -> unassigned partition
     //for messages that should be partitioned using the configured or default partitioner.
-    std::string strKey(key.data());
-    std::string* keyPtr = key.isEmpty() ? nullptr : &strKey;
     auto result = mProducer->produce(
         topic.toStdString(),                // topic
         RdKafka::Topic::PARTITION_UA,       // partition number. -1 for default
         RdKafka::Producer::RK_MSG_COPY,     // msgflags
         const_cast<char *>(message.data()), // payload
         message.length(),                   // payload length
-        keyPtr,
+        key.data(),                         // void* key
         key.size(),
         0,                                  // timestamp. the default is for current time
         nullptr,                            // headers
