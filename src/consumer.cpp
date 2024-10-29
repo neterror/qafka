@@ -23,7 +23,7 @@ Consumer::~Consumer() {
      * memory leaks.
      */
     RdKafka::wait_destroyed(500);
-    qDebug() << "Kafka receiver destroyed";
+    qDebug() << "Kafka consumer destroyed";
 }
 
 
@@ -84,7 +84,6 @@ void Consumer::work() {
         QCoreApplication::processEvents( QEventLoop::AllEvents, 10);
     }
 
-    qDebug() << "Consumer thread finished work";
     emit finished();
 }
 

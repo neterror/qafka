@@ -14,12 +14,8 @@ Producer::Producer(QObject *parent) : KafkaClient(parent) {
 }
 
 Producer::~Producer() {
-    if (mProducer) {
-        mProducer->flush(1000);
-        qDebug() << "Producer destroyed";
-    }
+    qDebug() << "producer is destroyed";
 }
-
 
 std::optional<QString> Producer::initialize() {
     auto config = getConfig("Producer");
@@ -60,6 +56,8 @@ void Producer::work() {
         mProducer->poll(10);
         QCoreApplication::processEvents( QEventLoop::AllEvents, 10);
     }
+
+    mProducer->flush(1000);
     emit finished();
 }
 
