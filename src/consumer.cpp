@@ -6,7 +6,8 @@
 #include <string>
 #include "config_options.h"
 
-Consumer::Consumer(QStringList topics, QObject* parent) : KafkaClient(parent), mTopics{topics} {
+Consumer::Consumer(QStringList topics, const QMap<QString, int>& offsets, QObject* parent) :
+    KafkaClient(parent), mTopics{topics}, mOffsets{offsets} {
     mTimer.start();
 }
 
@@ -47,7 +48,7 @@ std::optional<QString> Consumer::initialize() {
     std::vector<std::string> topics;
     for(auto t: mTopics) {
         topics.push_back(t.toStdString());
-        qDebug() << "subscribe to " << t;
+        qDebug().noquote() << "subscribe to " << t;
     }
     
     RdKafka::ErrorCode err = mConsumer->subscribe(topics);
@@ -59,6 +60,20 @@ std::optional<QString> Consumer::initialize() {
     return std::nullopt;
 }
 
+void Consumer::setTopicOffsets(const std::vector<RdKafka::TopicPartition *>& partitions) {
+    for (auto& partition : partitions) {
+        auto topic = QString(partition->topic().c_str());
+        if (mOffsets.contains(topic)) {
+            qDebug() << "offset to topic" << topic << "is " << mOffsets.value(topic);
+            partition->set_offset(mOffsets.value(topic));  // Latest messages
+        } else {
+            qDebug() << "offset to topic" << topic << "is RD_KAFKA_OFFSET_END";
+            partition->set_offset(RD_KAFKA_OFFSET_END);  // Latest messages
+        }
+    }
+    mOffsets.clear();
+}
+
 
 void Consumer::work() {
     if (auto error = initialize(); error) {
@@ -67,18 +82,25 @@ void Consumer::work() {
         return;
     }
 
+    emit initialized();
     mRunning = true;
     qDebug() << "receiver started work at " << mTimer.elapsed();
     while (mRunning) {
         //todo. check what is RdKafka::ERR__PARTITION_EOF and how to deal with it
         auto data = mConsumer->consume(1000);
-        auto timestamp = data->timestamp();
 
         if (data->err() == RdKafka::ERR_NO_ERROR) {
             QByteArray payload((char*)data->payload(), data->len());
             QByteArray topic = data->topic_name().c_str();
-
-            emit message(data->timestamp(), data->offset(), topic, payload);
+            QByteArray key;
+            if (data->key()) {
+                key = data->key()->c_str();
+            }
+            emit message(data->timestamp(), data->offset(), topic, key, payload);
+        } else {
+            if (data->err() != RdKafka::ERR__TIMED_OUT) {
+                qWarning() << "incoming data error: " << RdKafka::err2str(data->err()).c_str();
+            }
         }
         delete data;
         QCoreApplication::processEvents( QEventLoop::AllEvents, 10);
@@ -105,6 +127,10 @@ void Consumer::rebalance_cb(RdKafka::KafkaConsumer *consumer, RdKafka::ErrorCode
     RdKafka::Error *error      = NULL;
     RdKafka::ErrorCode ret_err = RdKafka::ERR_NO_ERROR;
 
+    if (!mOffsets.isEmpty()) {
+        setTopicOffsets(partitions);
+    }
+    
     if (err == RdKafka::ERR__ASSIGN_PARTITIONS) {
         if (consumer->rebalance_protocol() == "COOPERATIVE")
             error = consumer->incremental_assign(partitions);

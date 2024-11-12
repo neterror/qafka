@@ -2,6 +2,7 @@
 #include <QObject>
 #include "kafka_client.h"
 #include <librdkafka/rdkafkacpp.h>
+#include <librdkafka/rdkafka.h>
 #include "qafka_export.h"
 
 class QAFKA_EXPORT Consumer : public KafkaClient,
@@ -17,8 +18,11 @@ class QAFKA_EXPORT Consumer : public KafkaClient,
     RdKafka::KafkaConsumer* mConsumer;
     QStringList mTopics;
     QElapsedTimer mTimer;
+
+    QMap<QString, int> mOffsets;
+    void setTopicOffsets(const std::vector<RdKafka::TopicPartition *>& partitions);
 public:
-    explicit Consumer(QStringList topics, QObject* parent = nullptr);
+    Consumer(QStringList topics, const QMap<QString, int>& offsets = {} , QObject* parent = nullptr);
     ~Consumer();
 
     void stop() { mRunning = false; }
@@ -28,5 +32,6 @@ public slots:
     void work() override;
 
 signals:
-    void message(RdKafka::MessageTimestamp timestamp, quint64 offset, QByteArray topic, QByteArray data);
+    void message(RdKafka::MessageTimestamp timestamp, quint64 offset, QByteArray topic, QByteArray key, QByteArray data);
+    void initialized();
 };

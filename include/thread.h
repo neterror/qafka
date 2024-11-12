@@ -24,5 +24,11 @@ namespace Thread {
     T* spawn(P p) {
         return _start(new T(p));
     }
+
+    template<typename T, typename P1, typename P2>
+    T* spawn(P1 p1, P2 p2) {
+        return _start(new T(p1, p2));
+    }
+    
 }
 
