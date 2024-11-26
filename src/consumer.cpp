@@ -75,6 +75,44 @@ void Consumer::setTopicOffsets(const std::vector<RdKafka::TopicPartition *>& par
 }
 
 
+void Consumer::processMessage(RdKafka::Message* data) {
+    QByteArray payload((char*)data->payload(), data->len());
+    QByteArray topic = data->topic_name().c_str();
+    QByteArray key;
+    if (data->key()) {
+        key = data->key()->c_str();
+    }
+
+    auto lastTime = mLastMsgTime[topic];
+    int64_t delay = 0;
+    auto msgTime = data->timestamp();
+    if (mReplayWithTimeDelays) {
+        if (lastTime > 0) {
+            mDelay[topic] += msgTime.timestamp - lastTime;
+            delay = mDelay[topic]; //accumulate the delays 
+        }
+        mLastMsgTime[topic] = msgTime.timestamp;
+    }
+    if (!delay) {
+        emit message(msgTime, data->offset(), topic, key, payload);
+    } else {                
+        qDebug().noquote() << "About to emit message from topic" << topic << "with delay: " << delay;
+        QTimer::singleShot(delay, [this, msgTime, offset=data->offset(), topic, key, payload] {
+            emit message(msgTime, offset, topic, key, payload);
+        });
+    }
+}
+
+
+void Consumer::replayWithTimeDelays(bool enable) {
+    mLastMsgTime.clear();
+    mDelay.clear();
+    mReplayWithTimeDelays = enable;
+    qDebug() << "replayWithTimeDelays is now " << enable;
+}
+
+
+
 void Consumer::work() {
     if (auto error = initialize(); error) {
         qWarning() << "consumer initialization failed" << error;
@@ -85,29 +123,32 @@ void Consumer::work() {
     emit initialized();
     mRunning = true;
     qDebug() << "receiver started work at " << mTimer.elapsed();
+    
     while (mRunning) {
         //todo. check what is RdKafka::ERR__PARTITION_EOF and how to deal with it
         auto data = mConsumer->consume(1000);
 
-        if (data->err() == RdKafka::ERR_NO_ERROR) {
-            QByteArray payload((char*)data->payload(), data->len());
-            QByteArray topic = data->topic_name().c_str();
-            QByteArray key;
-            if (data->key()) {
-                key = data->key()->c_str();
+        switch(data->err()) {
+        case RdKafka::ERR_NO_ERROR:
+            processMessage(data);
+            break;
+        case RdKafka::ERR__TIMED_OUT:  //1000 ms elapsed with no message in the topic
+        case RdKafka::ERR__PARTITION_EOF:  //emitted when we consumed all available messages in the topic
+            if (mReplayWithTimeDelays) {
+                replayWithTimeDelays(false); //when all data is read, turn off the replay with time delay mode
             }
-            emit message(data->timestamp(), data->offset(), topic, key, payload);
-        } else {
-            if (data->err() != RdKafka::ERR__TIMED_OUT) {
-                qWarning() << "incoming data error: " << RdKafka::err2str(data->err()).c_str();
-            }
+            break;
+        default:
+            qWarning() << "incoming data error: " << RdKafka::err2str(data->err()).c_str();
         }
+
         delete data;
         QCoreApplication::processEvents( QEventLoop::AllEvents, 10);
     }
 
     emit finished();
 }
+
 
 
 static void part_list_print(

@@ -18,16 +18,24 @@ class QAFKA_EXPORT Consumer : public KafkaClient,
     RdKafka::KafkaConsumer* mConsumer;
     QStringList mTopics;
     QElapsedTimer mTimer;
-
     QMap<QString, int> mOffsets;
+    QMap<QByteArray, int64_t> mLastMsgTime;
+    QMap<QByteArray, int64_t> mDelay;
+    
+
+    //When replaying history records, emit the messages with the time delay between them as recorded in the timestamp of the event
+    bool mReplayWithTimeDelays {false};
+
     void setTopicOffsets(const std::vector<RdKafka::TopicPartition *>& partitions);
+    void processMessage(RdKafka::Message* message);
 public:
     Consumer(QStringList topics, const QMap<QString, int>& offsets = {} , QObject* parent = nullptr);
     ~Consumer();
 
     void stop() { mRunning = false; }
-    std::optional<QString> initialize();    
+    std::optional<QString> initialize();
 
+    void replayWithTimeDelays(bool enable);
 public slots:
     void work() override;
 
